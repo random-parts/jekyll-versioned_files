@@ -56,6 +56,8 @@ git_versioned_file:
 
 If a collection is not designated as `{ versioned=>true }` in `_config.yml` then a default collection with the label `versioned_files` and the following metadata will be set.
 
+- If using Travis CI to create the files only, this must be set in the `_config.yml` so gh-pages adds the collection when renders the site.
+
 ```yaml
 
 collections:
