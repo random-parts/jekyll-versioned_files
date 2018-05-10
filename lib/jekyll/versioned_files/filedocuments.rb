@@ -38,7 +38,7 @@ module Jekyll
 
       private
       def flatten(fname_path)
-        fname_path.gsub("/", "_")
+        fname_path.gsub("/", "_").delete_prefix("_")
       end
 
       # Modify the versioned files' yaml front matter
