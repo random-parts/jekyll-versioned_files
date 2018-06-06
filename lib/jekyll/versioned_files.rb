@@ -9,6 +9,12 @@ module Jekyll
                     :config_collection, :files, :frontmatter
     end
 
+    ERROR_MSG = {
+      :Argument_options => "Missing `versioned_file_options` in config. Please update your _config.yml",
+      :Argument_files => "Missing a `versioned_file_options['files']` value in config. "\
+                         "Please update your _config.yml with a file to process."
+    }.freeze
+
     COLLECTION_LABEL = "versioned_files"
 
     COLLECTION_METADATA = {
@@ -35,7 +41,8 @@ module Jekyll
     Jekyll::Hooks.register :site, :after_init do |site|
       self.config_collection = site.config['collections'].find{ |k, h| h['versioned'] }.to_a
 
-      raise ArgumentError, 'Missing `git_versioned_file` in config.' unless site.config['git_versioned_file']
+      raise ArgumentError, ERROR_MSG[:Argument_options] unless site.config['versioned_file_options']
+      raise ArgumentError, ERROR_MSG[:Argument_files] unless site.config['versioned_file_options']['files']
 
       self.files = site.config['git_versioned_file']
       self.frontmatter = Jekyll::Utils.deep_merge_hashes(
