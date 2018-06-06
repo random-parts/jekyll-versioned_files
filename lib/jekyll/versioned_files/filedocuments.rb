@@ -1,85 +1,126 @@
 module Jekyll
   module VersionedFiles
     class FileDocuments
-      YAML_REGEXP = %r!\A(---\s*\n.*?\n?)^((---|\.\.\.)\s*$\n?)!m
+      attr_reader   :diffoptions, :fname_paths
+      attr_accessor :line_count
 
-      # Initialize FileDocument.
-      #
-      # site - the site to which these documents belongs.
+      DIFF_HEADER_REGEXP = %r!diff.+?@@.+?@@\n+?(?<=.)?!m
+
+      # Initialize FileDocuments.
       #
       # Returns nothing.
-      def initialize(site)
-        files = VersionedFiles.files
-
-        @site        = site
-        @source_dir  = site.source
-        @fname_paths = files.kind_of?(Array) ? files : files.scan(/.+/)
-        @fm_mods     = VersionedFiles.frontmatter
+      def initialize
+        @diffoptions = VersionedFiles.format_options['diff_ignore']
+        @fname_paths = VersionedFiles.files
+        @style       = Styler.new
       end
 
       # Creates the collection of versioned files in site.source directory
       #
       # Returns nothing
       def create
-        fname = @fname_paths.each do |e| e.split("/").last
-          revisions(e).each_with_index do |sha, i|
+        revisions do |orig_file, sha_list|
+          sha_list.each_with_index do |sha, i|
             ver = (i + 1).to_s
-            version_dir = File.join(VersionedFiles.collection_dir, 'v' + ver)
-            file_path = File.join(version_dir, flatten(e))
+            # Git revisioned file
+            composeversions(orig_file, sha, ver) do |content, data, file_path|
+              # dont re-write files
+              if File.exist?(file_path)
+                linecount(file_path)
+                next
+              end
+              version_content = FrontMatter.new(data)
+              version_content.content = content 
+              write(file_path, version_content.update)
+              linecount(file_path)
+            end
+          end
 
-            # dont re-write files
-            next hash if File.exist?(file_path)
-            VersionedFiles.make_dir(version_dir)
-
-            write(file_path, versioned_content(e, sha, ver))
+          sha_list.map!.with_index { |sha, i| [] << sha << (i + 1) }
+          # Git Diff combination files
+          composediffs(orig_file, line_count, sha_list.combination(2)) do |content, data, file_path|
+            content.sub!(DIFF_HEADER_REGEXP, '')
+            if change?(content)
+              VersionedFiles.frontmatter["no_change"] = false
+            else
+              VersionedFiles.frontmatter["no_change"] = "no_change"
+              data["no_change"] = true
+            end
+            styled_content =  @style.style(content)
+            fm = FrontMatter.new(data).create
+            diff_file = fm << styled_content
+            write(file_path, diff_file)
           end
         end
       end
 
       private
-      def flatten(fname_path)
-        fname_path.gsub("/", "_").delete_prefix("_")
-      end
-
-      # Modify the versioned files' yaml front matter
-      #
-      # content - File content
-      # sha - current files commit hash
-      # ver - the number repersenting the files revision version
-      #
-      # Returns modified front matter
-      private
-      def modify_frontmatter(front_matter, sha, ver)
-        front_matter.sub(/permalink/, @fm_mods['permalink'])
-
-        modify_fm_variable(front_matter, "ver", ver) if @fm_mods["ver"]
-        modify_fm_variable(front_matter, "sha", sha) if @fm_mods["sha"]
+      def change?(content)
+        !content.empty?
       end
 
       private
-      def modify_fm_variable(front_matter, key, val)
-        front_matter.sub!(YAML_REGEXP, '\1' +@fm_mods[key]+ ': ' +val+ "\n" + '\2')
+      def composediffs(orig_file, lines, sha_pairs)
+        diff_dir = File.join(VersionedFiles.collection_dir, 'diffs')
+        VersionedFiles.make_dir(diff_dir)
+        sha_pairs.each do |pair|
+          data = {
+            "ver" => [pair[0][1], pair[1][1]],
+            "sha" => [pair[0][0], pair[1][0]]
+          }
+
+          diff_ver_dir = File.join(diff_dir, 'v'+pair[0][1].to_s)
+          file_name = 'v'+pair[0][1].to_s+'_v'+pair[1][1].to_s+'_'+flatten(orig_file)
+
+          VersionedFiles.make_dir(diff_ver_dir)
+          file_path = File.join(diff_ver_dir, file_name)
+          yield diff(orig_file, lines, pair[0][0], pair[1][0]), data, file_path
+        end
       end
 
       private
-      def revisions(fname_path)
-          all_sha = %x{ git rev-list --all #{fname_path} }.split("\n").reverse!
+      def composeversions(orig_file, sha, ver)
+        data = {"ver"=> ver, "sha"=> sha}
+
+        version_dir = File.join(VersionedFiles.collection_dir, 'v'+ver)
+        VersionedFiles.make_dir(version_dir)
+
+        file_path = File.join(version_dir, flatten(orig_file))
+        yield versioned_content(orig_file, sha), data, file_path
       end
 
-      # Collects the file content by its git commit hash
-      #
-      # fname_path - the `path/filename` to process
-      # sha - current fname_path's commit hash
-      # ver - the number repersenting the fname_path's revision version
-      #
-      # Returns file content to be writen
       private
-      def versioned_content(fname_path, sha, ver)
-        content = %x{ git cat-file -p #{sha}:#{fname_path} }.strip
-        front_matter = content.match(YAML_REGEXP).to_s
+      def diff(orig_file, lines, old_sha, new_sha)
+        %x{ git diff -U#{lines} --word-diff #{diffoptions} #{old_sha} #{new_sha} #{orig_file} }
+      end
 
-        content.sub!(YAML_REGEXP, modify_frontmatter(front_matter, sha, ver)) unless front_matter.empty?
-        content
+      private
+      def flatten(orig_file)
+        orig_file.gsub("/", "_").delete_prefix("_")
+      end
+
+      private
+      def linecount(file_path)
+        lc = %x{ wc -l < #{file_path} }.to_i
+        self.line_count = lc unless line_count > lc
+      end
+
+      private
+      def revisions
+        fname_paths.each do |e|
+          self.line_count = 0
+          yield e, shalist(e)
+        end
+      end
+
+      private
+      def shalist(orig_file)
+        %x{ git rev-list --all #{orig_file} }.split("\n").reverse!
+      end
+
+      private
+      def versioned_content(orig_file, sha)
+        %x{ git cat-file -p #{sha}:#{orig_file} }.strip
       end
 
       private

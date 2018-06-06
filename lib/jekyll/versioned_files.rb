@@ -1,12 +1,15 @@
 require 'jekyll/versioned_files/filecollection'
 require 'jekyll/versioned_files/filedocuments'
+require 'jekyll/versioned_files/frontmatter'
+require 'jekyll/versioned_files/styler'
 require 'jekyll/versioned_files/version'
 
 module Jekyll
   module VersionedFiles
     class << self
-      attr_accessor :collection_dir, :collection_label, :collection_meta, :collection_metadata,
-                    :config_collection, :files, :frontmatter
+      attr_accessor :config_collection, :collection_dir, :collection_label,
+                    :collection_metadata, :config_options, :diff_limit,
+                    :files, :format_options, :frontmatter
     end
 
     ERROR_MSG = {
@@ -23,14 +26,36 @@ module Jekyll
       "versioned" => true
     }.freeze
 
+    FORMAT_OPTIONS = {
+      "formatting" => {
+        "diff_ignore" => {
+          "ignore-all-space"    => false,
+          "ignore-blank-lines"  => true,
+          "ignore-space-change" => true
+        },
+        "diff_limit" => false,
+        "output" => :markdown
+      }
+    }.freeze
+
     FRONTMATTER = {
       "permalink" => "orig_permalink",
+      "no_change" => "no_change",
       "sha"       => "sha",
       "ver"       => "ver"
     }.freeze
 
+    CONFIG_OPTIONS = {
+      "frontmatter" => FRONTMATTER,
+      "formatting" => FORMAT_OPTIONS
+    }.freeze
+
     def self.make_dir(dir)
       FileUtils.mkdir_p(dir) unless File.directory?(dir)
+    end
+
+    def self.merge!(default, new_hash)
+      Jekyll::Utils.deep_merge_hashes!(default, new_hash)
     end
 
     # Jekyll::Hook
@@ -44,27 +69,28 @@ module Jekyll
       raise ArgumentError, ERROR_MSG[:Argument_options] unless site.config['versioned_file_options']
       raise ArgumentError, ERROR_MSG[:Argument_files] unless site.config['versioned_file_options']['files']
 
-      self.files = site.config['git_versioned_file']
-      self.frontmatter = Jekyll::Utils.deep_merge_hashes(
-                           FRONTMATTER,
-                           site.config['git_versioned_frontmatter'] ||= {}
-                         )
+      self.collection_label    = config_collection.empty? ? COLLECTION_LABEL : config_collection[0]
+      self.collection_metadata = merge!(COLLECTION_METADATA.dup, config_collection.last.to_h)
+      self.config_options      = merge!(CONFIG_OPTIONS.dup, site.config['versioned_file_options'])
+      self.files               = config_options['files']
+      self.files               = files.kind_of?(Array) ? files : files.scan(/.+/)
 
-      self.collection_label = config_collection.empty? ? COLLECTION_LABEL : config_collection[0]
-      self.collection_meta  = Jekyll::Utils.deep_merge_hashes(
-                                COLLECTION_METADATA,
-                                config_collection.last.to_h
-                              )
+      self.frontmatter                   = config_options['frontmatter']
+      self.format_options                = config_options['formatting']
+      self.format_options['diff_ignore'] = diffignore
+      self.diff_limit                    = config_options['formatting']['diff_limit']
 
       collection = FileCollection.new(site)
       # Merge versioned collection values into site.config,
       # only adds values not in the _config.yml
-      Jekyll::Utils.deep_merge_hashes!(
-        site.config['collections'],
-        {collection.label=>{collection.label=>collection.metadata}}
-      )
+      merge!(site.config['collections'], {collection.label=>{collection.label=>collection.metadata}})
 
-      FileDocuments.new(site).create
+      FileDocuments.new.create
+    end
+
+    private_class_method def self.diffignore
+      opts = format_options['diff_ignore'].select{ |k, v| v == true }.keys.join(" --")
+      "--" + opts unless opts.empty?
     end
   end
 end
