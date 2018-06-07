@@ -29,6 +29,7 @@ module Jekyll
                 linecount(file_path)
                 next
               end
+
               version_content = FrontMatter.new(data)
               version_content.content = content 
               write(file_path, version_content.update)
@@ -46,7 +47,8 @@ module Jekyll
               VersionedFiles.frontmatter["no_change"] = "no_change"
               data["no_change"] = true
             end
-            styled_content =  @style.style(content)
+
+            styled_content = @style.style(content)
             fm = FrontMatter.new(data).create
             diff_file = fm << styled_content
             write(file_path, diff_file)
@@ -63,12 +65,16 @@ module Jekyll
       def composediffs(orig_file, lines, sha_pairs)
         diff_dir = File.join(VersionedFiles.collection_dir, 'diffs')
         VersionedFiles.make_dir(diff_dir)
+        # limit number of diff pairs
+        if VersionedFiles.diff_limit
+          sha_pairs = sha_pairs.select { |pair| pair[1][1] - pair[0][1] == 1 }
+        end
+        
         sha_pairs.each do |pair|
           data = {
             "ver" => [pair[0][1], pair[1][1]],
             "sha" => [pair[0][0], pair[1][0]]
           }
-
           diff_ver_dir = File.join(diff_dir, 'v'+pair[0][1].to_s)
           file_name = 'v'+pair[0][1].to_s+'_v'+pair[1][1].to_s+'_'+flatten(orig_file)
 
