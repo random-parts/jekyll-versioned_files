@@ -29,7 +29,7 @@ Add the collection setting in the `_config.yml`.
 `{ versioned=>true }` must be set to the collection metadata for the designated versioned-files collection.
 
 ```yaml
-# _config.yml # versioned_files collection defaults
+# _config.yml `jekyll-versioned_files` collection defaults
 
 collections:
   collection_labelname:
@@ -77,9 +77,9 @@ versioned_file_options:
     output: markdown           # or html
   frontmatter:
     permalink: orig_permalink  # alt_name || false
-    diff_del: diff_del       # alt_name || false
-    diff_ins: diff_ins       # alt_name || false
-    sha: sha                # alt_name || false
+    diff_del: diff_del         # alt_name || false
+    diff_ins: diff_ins         # alt_name || false
+    sha: sha                   # alt_name || false
     ver: ver                   # alt_name || false
 ```
 
