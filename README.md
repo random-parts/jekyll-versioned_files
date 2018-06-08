@@ -47,6 +47,7 @@ The rest are defaults that can be changed.
 
 - Set the `diff_ignore` options and the `output` style for the created comparison files.
 - Read about the `git diff` [ignore options here](https://git-scm.com/docs/git-diff#git-diff---ignore-space-change)
+- `diff_limit` will limit the diff pairs that are created to adjacent revisions only.
 
 - `output: html` surrounds a deletion with `<del>` and an addition with `<ins>`.
 - `output: markdown` uses `**strong**` for additions and `~~del~~` for deletions.
@@ -54,14 +55,15 @@ The rest are defaults that can be changed.
 `frontmatter`
 
 - The files Front Matter `permalink` key is changed to `orig_permalink` (if present) to prevent it from rendering out to that location. Change the name in the `_config`
+- The `diff` word change count is added as [Front Matter](https://jekyllrb.com/docs/frontmatter/) keys `diff_del` and `diff_ins`.
 - A [Front Matter](https://jekyllrb.com/docs/frontmatter/) key `sha` is added with the file's commit hash for a versioned file, and as an array of the two hashes use for `git diff`.
 - A [Front Matter](https://jekyllrb.com/docs/frontmatter/) key `ver` is added with the revision version number or as an array containing the pair `diff` versions.
-- If no changes have been made between the pair, a `No_Change: true` entry is added.
+- If no changes have been made between the pair, a `no_change: true` entry is added.
 
 The created `diff` files insert a new Front Matter block at the top so any changes made to the original Front Matter will show up in the `page.content` [variable](https://jekyllrb.com/docs/variables/#page-variables)
 
 ```yaml
-#_config.yml
+#_config.yml `versioned_file_options` DEFAULTS
 
 versioned_file_options:
   files: # file is required
@@ -71,13 +73,14 @@ versioned_file_options:
       ignore-all-space: false
       ignore-blank-lines: true
       ignore-space-change: true
-    output: markdown             # or html
+    diff_limit: false
+    output: markdown           # or html
   frontmatter:
     permalink: orig_permalink  # alt_name || false
+    diff_del: "diff_del"       # alt_name || false
+    diff_ins: "diff_ins"       # alt_name || false
     sha: commit                # alt_name || false
     ver: ver                   # alt_name || false
-  #  diffs: diffs               # alt_name || false
-
 ```
 
 ## Usage
