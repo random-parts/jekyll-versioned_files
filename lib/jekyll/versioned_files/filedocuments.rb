@@ -43,12 +43,13 @@ module Jekyll
             content.sub!(DIFF_HEADER_REGEXP, '')
             if change?(content)
               VersionedFiles.frontmatter["no_change"] = false
+              styled_content = @style.style(content)
+              data.merge!(@style.stats.final)
             else
               VersionedFiles.frontmatter["no_change"] = "no_change"
               data["no_change"] = true
             end
 
-            styled_content = @style.style(content)
             fm = FrontMatter.new(data).create
             diff_file = fm << styled_content
             write(file_path, diff_file)
@@ -66,7 +67,7 @@ module Jekyll
         diff_dir = File.join(VersionedFiles.collection_dir, 'diffs')
         VersionedFiles.make_dir(diff_dir)
         # limit number of diff pairs
-        if VersionedFiles.diff_limit
+        if VersionedFiles.format_options['diff_limit']
           sha_pairs = sha_pairs.select { |pair| pair[1][1] - pair[0][1] == 1 }
         end
         

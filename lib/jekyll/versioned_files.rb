@@ -1,3 +1,4 @@
+require 'jekyll/versioned_files/counter'
 require 'jekyll/versioned_files/filecollection'
 require 'jekyll/versioned_files/filedocuments'
 require 'jekyll/versioned_files/frontmatter'
@@ -27,20 +28,20 @@ module Jekyll
     }.freeze
 
     FORMAT_OPTIONS = {
-      "formatting" => {
-        "diff_ignore" => {
-          "ignore-all-space"    => false,
-          "ignore-blank-lines"  => true,
-          "ignore-space-change" => true
-        },
-        "diff_limit" => false,
-        "output" => :markdown
-      }
+      "diff_ignore" => {
+        "ignore-all-space"    => false,
+        "ignore-blank-lines"  => true,
+        "ignore-space-change" => true
+      },
+      "diff_limit" => false,
+      "output" => "markdown"
     }.freeze
 
     FRONTMATTER = {
       "permalink" => "orig_permalink",
       "no_change" => "no_change",
+      "diff_del" => "diff_del",
+      "diff_ins" => "diff_ins",
       "sha"       => "sha",
       "ver"       => "ver"
     }.freeze
@@ -74,11 +75,9 @@ module Jekyll
       self.config_options      = merge!(CONFIG_OPTIONS.dup, site.config['versioned_file_options'])
       self.files               = config_options['files']
       self.files               = files.kind_of?(Array) ? files : files.scan(/.+/)
-
       self.frontmatter                   = config_options['frontmatter']
       self.format_options                = config_options['formatting']
       self.format_options['diff_ignore'] = diffignore
-      self.diff_limit                    = config_options['formatting']['diff_limit']
 
       collection = FileCollection.new(site)
       # Merge versioned collection values into site.config,
