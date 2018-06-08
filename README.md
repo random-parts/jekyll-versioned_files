@@ -77,9 +77,9 @@ versioned_file_options:
     output: markdown           # or html
   frontmatter:
     permalink: orig_permalink  # alt_name || false
-    diff_del: "diff_del"       # alt_name || false
-    diff_ins: "diff_ins"       # alt_name || false
-    sha: commit                # alt_name || false
+    diff_del: diff_del       # alt_name || false
+    diff_ins: diff_ins       # alt_name || false
+    sha: sha                # alt_name || false
     ver: ver                   # alt_name || false
 ```
 
