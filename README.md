@@ -1,6 +1,8 @@
 # jekyll-versioned_files plugin
 
-This creates a [Jekyll::Collection](https://jekyllrb.com/docs/collections/) directory containing a document for each git revision of each file listed in a `_config.yml versioned_file_options[files]:` custom setting. It also creates sets of [git](https://git-scm.com/docs/git-diff) [diffs](https://en.wikipedia.org/wiki/Diff_utility) between those revisions. A working example can be found at [http://random.parts/adhd-dyslexia/](http://random.parts/adhd-dyslexia/) and the site repo [github.com/random-parts/random-parts.github.io](https://github.com/random-parts/random-parts.github.io)
+This creates a [Jekyll::Collection](https://jekyllrb.com/docs/collections/) directory containing a document for each git revision of each file listed in a `_config.yml versioned_file_options[files]:` custom setting. It also creates sets of [git](https://git-scm.com/docs/git-diff) [diffs](https://en.wikipedia.org/wiki/Diff_utility) between those revisions.
+
+A working example can be found at [http://random.parts/adhd-dyslexia/](http://random.parts/adhd-dyslexia/) and the site repo [github.com/random-parts/random-parts.github.io](https://github.com/random-parts/random-parts.github.io)
 
 ## Installation
 
